@@ -10,3 +10,4 @@ dat
 *.dll
 start.ax
 *.exe
+obj*
