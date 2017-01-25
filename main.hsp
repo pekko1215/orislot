@@ -23,7 +23,7 @@ goto *main
 	lot_mode = game_mode
 	if(lot_mode==GM_REG||lot_mode==GM_JAC):lot_mode=2
 	if(game_mode==GM_NORMAL&&gensan<0):lot_mode = 3
-	for i, LOT_HAZURE, LOT_REG+1, 1
+	for i, 0,length(lot_table) , 1
 		r -= lot_table(i, settei, lot_mode)
 		if r < 0 {
 			ret = i
@@ -159,27 +159,12 @@ goto *main
 	/*デッドコード*/
 	ReelStop(prm1)
 #endif
-	if(stcnt==0&&zentyo>0&&rnd(16)==0):zenpiro = true
 	stopsound = SE_STOP
-	if(piro):stopsound = SE_SPSTOP2
-	stopstr = ""+stopstr+""+prm1
-	cnt+1&&power_syoto){
-		SetFlash 67+prm1
-		ov_play SE_BAN
-	}
-	if(stcnt==0&&prm1==2&&game_mode==GM_BIG&&GetReelCharPos(prm1)==11){
-		ov_play SE_SPSTOP
-	}
 	ov_play stopsound
 	stcnt++
 	return
-	
-//FPS計測
-#deffunc CountFPS int prm1
-	return
-
-// 初期化
 *selectsettei
+	//初期化
 	screen 0,180,230
 	gsel 0
 	cls 0
@@ -333,17 +318,6 @@ goto *main
 	OnTenpai *TenpaiCallBack
 	OnFlashEnd *FlashEndCallBack
 
-	if (d3dx9_version@SlotModule == 0) || (ps_version@SlotModule < 20) {
-		// PixelShaderが使えない
-		filter_none = 1
-	}
-	nofilter_col_table = 0, $FFFFFFFF, $FFFF4444, $FF44FF444, $FF4444FF, $FFFFFF44
-
-	//bonus_flag = BF_BIG
-	game_mode = GM_NORMAL
-	//1 154,151
-	//2 154,231
-	//3 154,311
 	betlanp(0)
 	return
 
@@ -393,21 +367,11 @@ repeat
 					if(timestate<0):timestate = 0
 					ReelStart timestate*2,timestate,0
 					voice_count = 0
-					ov_play SE_WAIT/*
-					if(nabi_lot>0){
-						if(nabi&&rnd(nabi_lot) == 0){
-							if(rcc>=RCC_BELL2&&rcc<=RCC_BELL4){
-								rightset " "+(rcc-RCC_BELL2+1)+" "
-								setFlash 41+rcc-RCC_BELL2
-							}
-						}
-					}*/
+					ov_play SE_WAIT/
 					canstop = false
 				}
 				rebaon = 1
 				if(wait_timer+waits<now_time){
-					//ov_stop SE_WAIT
-					//ov_play SE_START
 					rebaon = 0
 					slot_status = SS_REEL_START
 					if(effect>3){
@@ -430,23 +394,15 @@ repeat
 			swbreak
 		case SS_REPLAY:
 			if now_time >= event_timer {
-				ov_play SE_3BET
-				payset 0
-				repeat 3
-					betlanp(cnt+1)
-					await 40
-					redraw
-				loop
-				lanp_str = "11111111"
-				lanp_label = *l_none
-				setLanpImage
 				SetSubFlash
 				event_timer = now_time + SE_LENGTH_3BET
 				slot_status = SS_REPLAY_BET
+				ov_play SE_REPLAY
 			}
 			swbreak
 		case SS_REPLAY_BET:
 			if now_time >= event_timer {
+				MaxBetAndStart(now_time,true)
 				slot_status = SS_BET_END
 			}
 			swbreak
@@ -497,7 +453,7 @@ repeat
 		lanp_count = 0
 	}
 	if key & 32: auto = 1-auto
-	if key & 2 || auto == 1: MaxBetAndStart(now_time)
+	if key & 2 || auto == 1: MaxBetAndStart(now_time,false)
 	if (auto == 1&&canstop){
 		if(auto_counter>20||game_mode!=GM_NORMAL||bonus_flag!=BF_HAZURE||high_speed){
 			gosub *Autoplay
@@ -512,34 +468,6 @@ repeat
 		if ((key & 8)||(key & 2)): PushStopButton(1)
 		if ((key & 4)||(key & 2)): PushStopButton(2)
 	}
-	if(game_mode==GM_NORMAL&&cpushed==false&&(key&16)!=false&&stcnt==3){
-		chancenum = 1
-		if(rnd(2)==0):chancenum++
-		if(rnd(3)==0):chancenum++
-		if(rcc==RCC_1MAI1||rcc==RCC_1MAI2){
-			chancenum = 5
-			if(rnd(2)==0):chancenum++
-			if(rnd(4)==0):chancenum+=rnd(2)
-		}
-		if(bonus_flag!=BF_HAZURE):chancenum = rnd(4)+4
-		if(bonus_flag==BF_BIG&&rcc!=RCC_BIG4){
-			if(rnd(4)<3){
-				chancenum = rnd(4)
-				if(rnd(2)==0):chancenum+=4
-			}else{
-				chancenum = 7
-			}
-		}
-		lanp_str = "22222222"
-		lanp_str = strmid(lanp_str,0,chancenum+1)+"0000000"
-		lanp_label = *l_none
-		setLanpImage
-		cpushed = true
-		reelwait 20
-		lanp_str = "00000000"
-		lanp_label = *l_none
-		setLanpImage
-	}
 	
 	BeginScene
 	
@@ -547,7 +475,6 @@ repeat
 	Render
 	EndScene
 	Present
-	//CountFPS(now_time)
 	if update_gameinfo : DrawGameInfo
 	await 0 : sleep 1
 loop
