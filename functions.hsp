@@ -1,5 +1,4 @@
 goto *pn
-dialog "dwa"
 *pn
 #deffunc box int x1,int y1,int x2, int y2
 	line x1,y1,x2,y1

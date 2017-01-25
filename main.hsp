@@ -10,110 +10,14 @@
 #include "countdim.as"
 #include "functions.as"
 #define USE_SPECIAL_TABLE
-lanpstart = 0
-auto = 0
-p=0
-jacf = 0
-rt = -1
-zentyo = 0
-credit = 0
-isHi = false
-waits = 4100
-lanp_loop = 0	
-lanp_state = -1
-lanp_stop = -1
-rt = -1
-nabi_lot = 0
-nabi = false
-ldim lanp_label,1
-bonus_ato = 0
-lanp_str = "01000000"
-oldseg = ""
-reinnbo = 0
-mode = MODE_NORMAL
-settei = -1
-tenjo = 500
-mci "open d:\ type cdaudio alias drive"
-big_stock = rnd(16)
-reg_stock = rnd(16)
-syukig = 1
-title "(｢･ω･)｢ｶﾞｵｰ"
-celload "img\\betlanp.png",100
-celload "img\\betlanpon.png",101
-repeat 10
-	celload "img\\seg\\"+cnt+".jpg",102+cnt
-loop
-celload "img\\ranp1.bmp",120
-celload "img\\ranp2.bmp",121
-repeat 10
-	celload "img\\seg\\lseg"+cnt+".png",150+cnt
-loop
-celload "img\\seg\\lseg-.png",170
-celload "img\\seg\\lsegf.png",171
 
-repeat 7
-	celload "img\\seg\\peaceseg\\"+(cnt+1)+".png",172+cnt
-loop
+gosub *pic_file_load
+title "オリスロテンプレート"
+
 goto *main
-
-/*--
-	int game_mode
-	int settei
-	int bonus_flag
-
-	int allplay_cnt
-	int play_cnt
-	int coin
-	int getcoin
-	int big_cnt
-	int reg_cnt
-	int update_gameinfo
-
-	int rcc
-	int slot_status
-	int table_num
-	int koyaku_flag
-	int event_timer	
-	int se_length_1bet
-	int se_length_3bet
-	int se_length_replay
-	int se_length_pay2
-	int se_length_pay6
-	int se_length_pay10
-
-	int effect_id
-	int syoutou_ptn
-	dim hanabi_color		;フィルタ
-	dim hanabi_scale		;拡大率
-	dim hanabi_rect			;動画表示の転送元の領域(LEFT,TOP,RIGHT,BOTTOM)
-
-	int fps_cnt				;fps計測用カウンター
-	int fps_count_time		;前回のfps計測時間
-	double fps
-
-	int bgm_bb1_lsp			;ループ開始位置
-	int bgm_bb1_lep			;ループ終了位置
-
-	int bonus_game_counter	;残りボーナスゲーム数
-	int jac_game_counter	;残りJACゲーム数
-	int jac_get_counter		;残りJAC取得回数
-	int jacin_counter		;残りJACIN回数
-
-	int next_flash_id
-	int now_time
-
-	int filter_none
-	dim nofilter_col_table
---*/
-
 // 役の抽選
 #defcfunc lot
-/*--
-	int ret
-	int r
-	int i
-	int lot_mode
---*/
+	//役の抽選
 	ret = -1 //lot_tableに問題がある場合
 	r = rnd(32768)
 	lot_mode = game_mode
@@ -128,349 +32,146 @@ goto *main
 	next
 	return ret
 
-//リール制御コードを取得
 #defcfunc getrcc int yaku
-/*--
-	int ret 
---*/
+//リール制御コードを取得を振り分ける
+//yaku : 成立役(LOT～)
+
 	ret = -1 // 想定外の役が成立している場合
 	switch(game_mode)
 		case GM_NORMAL:
 			switch(bonus_flag)
 				case BF_HAZURE:
 					switch(yaku)
-						case LOT_HAZURE:
-							ret = RCC_HAZURE
-							swbreak
-						case LOT_BIG:
-							ret = RCC_BIG1+rnd(3)
-							bonus_flag = BF_BIG
-							swbreak
-						case LOT_REG:
-							ret = RCC_REG1
-							bonus_flag==BF_REG
-							swbreak
-						case LOT_CHERRY:
-							ret = RCC_CHERRY
-							swbreak
-						case LOT_BELL:
-							ret = RCC_BELL
-							swbreak
-						case LOT_SUIKA:
-							ret = RCC_SUIKA
-							swbreak
-						case LOT_REPLAY:
-							ret = RCC_REPLAY
-							swbreak
 					swend
 					swbreak
 				case BF_BIG:
 					switch(yaku)
-						case LOT_HAZURE:
-						case LOT_BIG:
-						case LOT_REG:
-							ret = RCC_BIG3
-							bonus_flag = BF_BIG
-							b_color = 0
-							swbreak
-						case LOT_CHERRY:
-							ret = RCC_CHERRY
-							swbreak
-						case LOT_BELL:
-							ret = RCC_BELL
-							swbreak
-						case LOT_SUIKA:
-							ret = RCC_SUIKA
-							swbreak
-						case LOT_REPLAY:
-							ret = RCC_REPLAY
-							swbreak
 					swend
 				swbreak
 				case BF_REG:
 					switch(yaku)
-						case LOT_HAZURE:
-						case LOT_BIG:
-						case LOT_REG:
-							ret = RCC_REG1
-							bonus_flag = BF_REG
-							swbreak
-						case LOT_CHERRY:
-							ret = RCC_CHERRY
-							swbreak
-						case LOT_BELL:
-							ret = RCC_BELL
-							swbreak
-						case LOT_SUIKA:
-							ret = RCC_SUIKA
-							swbreak
-						case LOT_REPLAY:
-							ret = RCC_REPLAY
-							swbreak
 					swend
-				swbreak
 			swend
 			swbreak
 		case GM_BIG:
 			switch(yaku)
-				case LOT_REPLAY:
-					ret = RCC_JACIN1+rnd(2)
-				swbreak
-				case LOT_SUIKA:
-					ret = RCC_15_1+rnd(2)
-					swbreak
-				case LOT_BELL:
-					ret = RCC_BELL
-				swbreak
-				case LOT_HAZURE:
-					ret = RCC_HAZURE
-				swbreak
 			swend
 			swbreak
 		case GM_JAC:
 		case GM_REG:
 			switch(yaku)
-				case LOT_HAZURE
-					ret = RCC_BIG3
-				swbreak
-				case LOT_REPLAY
-					ret = RCC_JACGAME
-				swbreak
 			swend
 	swend
 	return ret
 
 // 演出振り分け
 #deffunc geteffectid int yaku
-/*--
-	int idx
-	int ret
-	int r
---*/
-	bound = 0
-	if(game_mode!=GM_NORMAL):return
-	if(bonus_flag==BF_HAZURE&&yaku!=RCC_1MAI1&&yaku!=RCC_1MAI2&&yaku!=RCC_HAZURE&&rnd(128)==0){
-		if(rnd(4)<3){
-			bound = 1
-		}else{
-			if(rnd(4)<3){
-				bound = 2
-			}else{
-				bound = 3
-			}
-		}
-	}
-	if(bonus_flag!=BF_HAZURE&&rnd(4)==0){
-		if(rnd(6)==0){
-			if(rnd(3)==0){
-				bound = 4
-			}else{
-				bound = 3
-			}
-		}else{
-			if(rnd(2)){
-				bound = 1
-			}else{
-				bound = 2
-			}
-		}
-	}
+	//演出を振り分ける
+	//yaku : 成立役(LOT～)
 	return
 #deffunc DrawGameInfo
+	//ゲーム情報の表示
 	return
-//リールスタート
 #deffunc Start
-/*--
-	int yaku
-	int fid
---*/
-	bf2 = bonus_flag
-	yaku = lot()
-	//if(game_mode==GM_NORMAL&&bonus_flag==BF_HAZURE&&rnd(99)==0):yaku=LOT_BIG+rnd(2)
-	//rightset ""+yaku
-	stcnt = 0
-	getkey a,16
-	getkey b,17
-	getkey c,18
-	if(b==1):setI = (setI+1)\(LOT_REG+1)
-	title ""+setI
-	if(a==1):yaku = setI
-	if(c==1):rt = 13
-	rcc = getrcc(yaku)
-	syoto = 0
-	yokoku = false
-	geteffectid rcc
+	//リールが回転し始める前に動作する処理
+	//成立役の抽選や、制御の振り分けを行う
 	
-	repeat 3
-		if(bound&(2^cnt)!=0){
-			SetBoundStopParams cnt, 7,150, 7,0.4
-		}else{
-			SetBoundStopParams cnt,0,0,0,0
-		}
-	loop
-	iti  = false
-	SetReelControlCode rcc
-	flash = 0
-	SetSubFlash
-	if game_mode == GM_NORMAL {
+	yaku = lot()		   //成立役の抽選
+	rcc = getrcc(yaku)     //リール制御コードの取得
+	geteffectid yaku	   //演出の振り分け
+	SetReelControlCode rcc //リール制御コードを実行
+	SetSubFlash            //リール始動時のフラッシュ初期化
+	
+	if game_mode == GM_NORMAL {   //通常時のゲーム数カウント
 			play_cnt++
 			allplay_cnt++
-			update_gameinfo = TRUE
 	}
-	if(isAR&&bonus_flag!=BF_HAZURE):arRen=true
-	kousoku = 0
-	//if(cd7==0&&isRush==false&&rcc!=RCC_REPLAY):syukig--
-	piro = false
-	if(kokuti=true&&kokuti_t==0){
-		gosub *kabuto
-	}
-
-	
-#ifdef USE_SPECIAL_TABLE
-	table_num = -1
-	if (yaku == LOT_BIG) || (yaku == LOT_REG) {
-		koyaku_flag == LOT_HAZURE
-	} else {
-		koyaku_flag == yaku
-	}
-#endif
 	return
 
 #deffunc MaxBetAndStart int prm1
-/*--
-	int bet_coin
---*/
+	//Betボタンを押したときの処理
+	//prm1 :システム時間
 	if (GetReelStatus(LEFT_REEL) > 1) or (GetReelStatus(CENTER_REEL) > 1) or (GetReelStatus(RIGHT_REEL) > 1) : return
-	if((gao_c>0 || game_mode != GM_NORMAL ||(bonus_flag != BF_HAZURE && renzoku==0))==False){
-		//rightset "   "
-	}
 	if slot_status == SS_REPLAY_BET_END {
-		hanabi_color = 0, 0, 0
 		Start
 	}
 	if slot_status != SS_READY : return
-	if (game_mode == GM_NORMAL) || (game_mode = GM_BIG) {
-		setSubFlash
-		ov_play SE_3BET
-		event_timer = prm1 + SE_LENGTH_3BET
-		repeat 3
-			payset 0
-			betlanp(cnt+1)
-			if(auto==false):await 40
-			credit--
-			if(credit<0):credit = 0
-			creditset credit
-			redraw
-		loop
-		bet_coin = 3
-	}else{
-		SetFlash 0
-		betlanp(1)
-		payset 0
-		ov_play SE_1BET
-		event_timer = prm1 + SE_LENGTH_3BET/3
-		bet_coin = 1
-		credit-=1
-		if(credit<0):credit = 0
-		creditset credit
-	}
+	
+	switch(game_mode)
+		case GM_NORMAL:
+		case GM_BIG:
+		case GM_REG:
+		case GM_JAC:
+			bet_coin = 3
+		swbreak
+	swend
+	switch(bet_coin)
+		case 1:
+			setSubFlash
+			ov_play SE_1BET
+			event_timer = prm1 + se_length_array(SE_1BET)
+			repeat 1
+				payset 0
+				betlanp(cnt+1)
+				credit--
+				if(credit<0):credit = 0
+				creditset credit
+			loop
+			swbreak
+		case 2:
+		case 3:
+			setSubFlash
+			ov_play SE_3BET
+			event_timer = prm1 + se_length_array(SE_3BET)
+			repeat 3
+				payset 0
+				betlanp(cnt+1)
+				credit--
+				if(credit<0):credit = 0
+				creditset credit
+			loop
+			swbreak
+	swend
 	
 	if game_mode!=GM_NORMAL : getcoin -= bet_coin : else : getcoin = 0
 	SetBetCoin bet_coin
 	coin -= bet_coin
-	gensan -= genzan(settei)*bet_coin
+	
 	slot_status = SS_BET
 	update_gameinfo = TRUE
 	
-	if(game_mode!=GM_JAC):lanp_str = "11111111"
 	lanp_label = *l_none
 	setLanpImage
+	
 	if(game_mode==GM_NORMAL&&bonus_flag==BF_HAZURE):rightset "   "
-	if(kokuti=true&&kokuti_t==5){
-		gosub *kabuto
-	}
-	//if(game_mode==GM_NORMAL):rightset ""+hi_game
+	
 #deffunc PushStopButton int prm1
-/*--
-	int maxsize
---*/
+//停止ボタンを押したときの処理
+//prm1 : 停止リール
+
 	if (prm1>3):return
 	if GetStopButtonStatus(prm1) == BS_DISABLE : return 0
 #ifdef USE_SPECIAL_TABLE
-// RCTMakerで作成した物とは別に用意したテーブルを併用する例
-/*--
-	int slide
-	int p
-	int idx
---*/
+	//
 	p = ReelStop_new(prm1)
 	if (stop_count@SlotModule == 0) && (prm1 == LEFT_REEL) && (game_mode == GM_NORMAL) {
-	//通常時、第1停止左なら中右のテーブルがあるかも
-		if (koyaku_flag == LOT_HAZURE) || (koyaku_flag == LOT_CHERRY) {
-			switch(bonus_flag)
-				case BF_HAZURE:
-					idx = 0
-					swbreak
-				case BF_BIG:
-					idx = 1
-					swbreak
-				case BF_REG:
-					idx = 2
-					swbreak
-			swend
-		}
-	}
-#else /* USE_SPECIAL_TABLE */
+#else 
+	/*デッドコード*/
 	ReelStop(prm1)
 #endif
 	if(stcnt==0&&zentyo>0&&rnd(16)==0):zenpiro = true
 	stopsound = SE_STOP
 	if(piro):stopsound = SE_SPSTOP2
 	stopstr = ""+stopstr+""+prm1
-	if(syoto!=0&&power_syoto==False){
-		switch(stopstr)
-			case "0":
-			case "1":
-			case "2":
-				SetFlash 67+prm1
-			swbreak
-			case "01"
-			case "10"
-				SetFlash 72
-			swbreak
-			case "02"
-			case "20"
-				SetFlash 70
-			swbreak
-			case "12"
-			case "21"
-				SetFlash 71
-			swbreak
-			default:
-				SetFlash 73
-			swbreak
-		swend
-		ov_play SE_SYOTO
-		syoto--
-	}
-	if(syoto==stcnt+1&&power_syoto){
+	cnt+1&&power_syoto){
 		SetFlash 67+prm1
 		ov_play SE_BAN
 	}
 	if(stcnt==0&&prm1==2&&game_mode==GM_BIG&&GetReelCharPos(prm1)==11){
 		ov_play SE_SPSTOP
 	}
-	dim strstart,4
-	strstart(0) = 0,3,5,8
-	dim strlengs,3
-	strlengs(0) = 3,2,3
 	ov_play stopsound
-	ov_setpan stopsound,0
 	stcnt++
-	if(stcnt==3){
-		zenpiro = 0
-		stopstr = ""
-	}
 	return
 	
 //FPS計測
@@ -491,9 +192,6 @@ goto *main
 	button goto "設定5",*settei5
 	button goto "設定6",*settei6
 	button goto "設定?",*settei_rand
-	chkbox "ハイスピード",high_speed
-	//tukoutal = 64
-	//input tukoutal
 	input waits
 	stop
 *settei1
@@ -1463,4 +1161,22 @@ return
 			}
 		loop
 	}
+return
+*pic_file_load
+	celload "img\\betlanp.png",100
+		celload "img\\betlanpon.png",101
+	repeat 10
+		celload "img\\seg\\"+cnt+".jpg",102+cnt
+	loop
+	celload "img\\ranp1.bmp",120
+	celload "img\\ranp2.bmp",121
+	repeat 10
+		celload "img\\seg\\lseg"+cnt+".png",150+cnt
+	loop
+	celload "img\\seg\\lseg-.png",170
+	celload "img\\seg\\lsegf.png",171
+	
+	repeat 7
+		celload "img\\seg\\peaceseg\\"+(cnt+1)+".png",172+cnt
+	loop
 return
