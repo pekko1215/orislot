@@ -1,0 +1,27 @@
+inp = ""
+input inp
+button gosub "‹N“®",*start
+stop
+*start
+	screen 1,9*2*strlen(inp),9*5,8
+	pos 0,0
+	font "",40
+	mes inp
+	pw = 2
+	window_sizex = ginfo(20)/ginfo_winx
+	window_sizey = ginfo(21)/ginfo_winy
+	repeat ginfo_winx
+		x = cnt
+		repeat ginfo_winy
+			y = cnt
+			pget x,y
+			if(ginfo_r==0&&ginfo_g==0&&ginfo_b==0){
+				screen pw,window_sizex,window_sizey,8,window_sizex*x,window_sizey*y
+				color 0,0,0
+				boxf
+				pw++
+				gsel 1
+			}
+		loop
+	loop
+	return

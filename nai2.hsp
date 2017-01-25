@@ -1,0 +1,1466 @@
+#define USE_P2B_DLL
+#define global FIRSTINDEX_IS_YAKU_NONE
+#include "SlotModuleDX9.as"
+#include "ovplay.as"
+#include "winmm.as"
+#include "kernel32.as"
+#include "aviplay2.as"
+#include "nai2_table.hsp"
+#include "procesdim.as"
+#include "countdim.as"
+#include "functions.as"
+#define USE_SPECIAL_TABLE
+lanpstart = 0
+auto = 0
+p=0
+jacf = 0
+rt = -1
+zentyo = 0
+credit = 0
+isHi = false
+waits = 4100
+lanp_loop = 0	
+lanp_state = -1
+lanp_stop = -1
+rt = -1
+nabi_lot = 0
+nabi = false
+ldim lanp_label,1
+bonus_ato = 0
+lanp_str = "01000000"
+oldseg = ""
+reinnbo = 0
+mode = MODE_NORMAL
+settei = -1
+tenjo = 500
+mci "open d:\ type cdaudio alias drive"
+big_stock = rnd(16)
+reg_stock = rnd(16)
+syukig = 1
+title "(｢･ω･)｢ｶﾞｵｰ"
+celload "img\\betlanp.png",100
+celload "img\\betlanpon.png",101
+repeat 10
+	celload "img\\seg\\"+cnt+".jpg",102+cnt
+loop
+celload "img\\ranp1.bmp",120
+celload "img\\ranp2.bmp",121
+repeat 10
+	celload "img\\seg\\lseg"+cnt+".png",150+cnt
+loop
+celload "img\\seg\\lseg-.png",170
+celload "img\\seg\\lsegf.png",171
+
+repeat 7
+	celload "img\\seg\\peaceseg\\"+(cnt+1)+".png",172+cnt
+loop
+goto *main
+
+/*--
+	int game_mode
+	int settei
+	int bonus_flag
+
+	int allplay_cnt
+	int play_cnt
+	int coin
+	int getcoin
+	int big_cnt
+	int reg_cnt
+	int update_gameinfo
+
+	int rcc
+	int slot_status
+	int table_num
+	int koyaku_flag
+	int event_timer	
+	int se_length_1bet
+	int se_length_3bet
+	int se_length_replay
+	int se_length_pay2
+	int se_length_pay6
+	int se_length_pay10
+
+	int effect_id
+	int syoutou_ptn
+	dim hanabi_color		;フィルタ
+	dim hanabi_scale		;拡大率
+	dim hanabi_rect			;動画表示の転送元の領域(LEFT,TOP,RIGHT,BOTTOM)
+
+	int fps_cnt				;fps計測用カウンター
+	int fps_count_time		;前回のfps計測時間
+	double fps
+
+	int bgm_bb1_lsp			;ループ開始位置
+	int bgm_bb1_lep			;ループ終了位置
+
+	int bonus_game_counter	;残りボーナスゲーム数
+	int jac_game_counter	;残りJACゲーム数
+	int jac_get_counter		;残りJAC取得回数
+	int jacin_counter		;残りJACIN回数
+
+	int next_flash_id
+	int now_time
+
+	int filter_none
+	dim nofilter_col_table
+--*/
+
+// 役の抽選
+#defcfunc lot
+/*--
+	int ret
+	int r
+	int i
+	int lot_mode
+--*/
+	ret = -1 //lot_tableに問題がある場合
+	r = rnd(32768)
+	lot_mode = game_mode
+	if(lot_mode==GM_REG||lot_mode==GM_JAC):lot_mode=2
+	if(game_mode==GM_NORMAL&&gensan<0):lot_mode = 3
+	for i, LOT_HAZURE, LOT_REG+1, 1
+		r -= lot_table(i, settei, lot_mode)
+		if r < 0 {
+			ret = i
+			_break
+		}
+	next
+	return ret
+
+//リール制御コードを取得
+#defcfunc getrcc int yaku
+/*--
+	int ret 
+--*/
+	ret = -1 // 想定外の役が成立している場合
+	switch(game_mode)
+		case GM_NORMAL:
+			switch(bonus_flag)
+				case BF_HAZURE:
+					switch(yaku)
+						case LOT_HAZURE:
+							ret = RCC_HAZURE
+							swbreak
+						case LOT_BIG:
+							ret = RCC_BIG1+rnd(3)
+							bonus_flag = BF_BIG
+							swbreak
+						case LOT_REG:
+							ret = RCC_REG1
+							bonus_flag==BF_REG
+							swbreak
+						case LOT_CHERRY:
+							ret = RCC_CHERRY
+							swbreak
+						case LOT_BELL:
+							ret = RCC_BELL
+							swbreak
+						case LOT_SUIKA:
+							ret = RCC_SUIKA
+							swbreak
+						case LOT_REPLAY:
+							ret = RCC_REPLAY
+							swbreak
+					swend
+					swbreak
+				case BF_BIG:
+					switch(yaku)
+						case LOT_HAZURE:
+						case LOT_BIG:
+						case LOT_REG:
+							ret = RCC_BIG3
+							bonus_flag = BF_BIG
+							b_color = 0
+							swbreak
+						case LOT_CHERRY:
+							ret = RCC_CHERRY
+							swbreak
+						case LOT_BELL:
+							ret = RCC_BELL
+							swbreak
+						case LOT_SUIKA:
+							ret = RCC_SUIKA
+							swbreak
+						case LOT_REPLAY:
+							ret = RCC_REPLAY
+							swbreak
+					swend
+				swbreak
+				case BF_REG:
+					switch(yaku)
+						case LOT_HAZURE:
+						case LOT_BIG:
+						case LOT_REG:
+							ret = RCC_REG1
+							bonus_flag = BF_REG
+							swbreak
+						case LOT_CHERRY:
+							ret = RCC_CHERRY
+							swbreak
+						case LOT_BELL:
+							ret = RCC_BELL
+							swbreak
+						case LOT_SUIKA:
+							ret = RCC_SUIKA
+							swbreak
+						case LOT_REPLAY:
+							ret = RCC_REPLAY
+							swbreak
+					swend
+				swbreak
+			swend
+			swbreak
+		case GM_BIG:
+			switch(yaku)
+				case LOT_REPLAY:
+					ret = RCC_JACIN1+rnd(2)
+				swbreak
+				case LOT_SUIKA:
+					ret = RCC_15_1+rnd(2)
+					swbreak
+				case LOT_BELL:
+					ret = RCC_BELL
+				swbreak
+				case LOT_HAZURE:
+					ret = RCC_HAZURE
+				swbreak
+			swend
+			swbreak
+		case GM_JAC:
+		case GM_REG:
+			switch(yaku)
+				case LOT_HAZURE
+					ret = RCC_BIG3
+				swbreak
+				case LOT_REPLAY
+					ret = RCC_JACGAME
+				swbreak
+			swend
+	swend
+	return ret
+
+// 演出振り分け
+#deffunc geteffectid int yaku
+/*--
+	int idx
+	int ret
+	int r
+--*/
+	bound = 0
+	if(game_mode!=GM_NORMAL):return
+	if(bonus_flag==BF_HAZURE&&yaku!=RCC_1MAI1&&yaku!=RCC_1MAI2&&yaku!=RCC_HAZURE&&rnd(128)==0){
+		if(rnd(4)<3){
+			bound = 1
+		}else{
+			if(rnd(4)<3){
+				bound = 2
+			}else{
+				bound = 3
+			}
+		}
+	}
+	if(bonus_flag!=BF_HAZURE&&rnd(4)==0){
+		if(rnd(6)==0){
+			if(rnd(3)==0){
+				bound = 4
+			}else{
+				bound = 3
+			}
+		}else{
+			if(rnd(2)){
+				bound = 1
+			}else{
+				bound = 2
+			}
+		}
+	}
+	return
+#deffunc DrawGameInfo
+	return
+//リールスタート
+#deffunc Start
+/*--
+	int yaku
+	int fid
+--*/
+	bf2 = bonus_flag
+	yaku = lot()
+	//if(game_mode==GM_NORMAL&&bonus_flag==BF_HAZURE&&rnd(99)==0):yaku=LOT_BIG+rnd(2)
+	//rightset ""+yaku
+	stcnt = 0
+	getkey a,16
+	getkey b,17
+	getkey c,18
+	if(b==1):setI = (setI+1)\(LOT_REG+1)
+	title ""+setI
+	if(a==1):yaku = setI
+	if(c==1):rt = 13
+	rcc = getrcc(yaku)
+	syoto = 0
+	yokoku = false
+	geteffectid rcc
+	
+	repeat 3
+		if(bound&(2^cnt)!=0){
+			SetBoundStopParams cnt, 7,150, 7,0.4
+		}else{
+			SetBoundStopParams cnt,0,0,0,0
+		}
+	loop
+	iti  = false
+	SetReelControlCode rcc
+	flash = 0
+	SetSubFlash
+	if game_mode == GM_NORMAL {
+			play_cnt++
+			allplay_cnt++
+			update_gameinfo = TRUE
+	}
+	if(isAR&&bonus_flag!=BF_HAZURE):arRen=true
+	kousoku = 0
+	//if(cd7==0&&isRush==false&&rcc!=RCC_REPLAY):syukig--
+	piro = false
+	if(kokuti=true&&kokuti_t==0){
+		gosub *kabuto
+	}
+
+	
+#ifdef USE_SPECIAL_TABLE
+	table_num = -1
+	if (yaku == LOT_BIG) || (yaku == LOT_REG) {
+		koyaku_flag == LOT_HAZURE
+	} else {
+		koyaku_flag == yaku
+	}
+#endif
+	return
+
+#deffunc MaxBetAndStart int prm1
+/*--
+	int bet_coin
+--*/
+	if (GetReelStatus(LEFT_REEL) > 1) or (GetReelStatus(CENTER_REEL) > 1) or (GetReelStatus(RIGHT_REEL) > 1) : return
+	if((gao_c>0 || game_mode != GM_NORMAL ||(bonus_flag != BF_HAZURE && renzoku==0))==False){
+		//rightset "   "
+	}
+	if slot_status == SS_REPLAY_BET_END {
+		hanabi_color = 0, 0, 0
+		Start
+	}
+	if slot_status != SS_READY : return
+	if (game_mode == GM_NORMAL) || (game_mode = GM_BIG) {
+		setSubFlash
+		ov_play SE_3BET
+		event_timer = prm1 + SE_LENGTH_3BET
+		repeat 3
+			payset 0
+			betlanp(cnt+1)
+			if(auto==false):await 40
+			credit--
+			if(credit<0):credit = 0
+			creditset credit
+			redraw
+		loop
+		bet_coin = 3
+	}else{
+		SetFlash 0
+		betlanp(1)
+		payset 0
+		ov_play SE_1BET
+		event_timer = prm1 + SE_LENGTH_3BET/3
+		bet_coin = 1
+		credit-=1
+		if(credit<0):credit = 0
+		creditset credit
+	}
+	
+	if game_mode!=GM_NORMAL : getcoin -= bet_coin : else : getcoin = 0
+	SetBetCoin bet_coin
+	coin -= bet_coin
+	gensan -= genzan(settei)*bet_coin
+	slot_status = SS_BET
+	update_gameinfo = TRUE
+	
+	if(game_mode!=GM_JAC):lanp_str = "11111111"
+	lanp_label = *l_none
+	setLanpImage
+	if(game_mode==GM_NORMAL&&bonus_flag==BF_HAZURE):rightset "   "
+	if(kokuti=true&&kokuti_t==5){
+		gosub *kabuto
+	}
+	//if(game_mode==GM_NORMAL):rightset ""+hi_game
+#deffunc PushStopButton int prm1
+/*--
+	int maxsize
+--*/
+	if (prm1>3):return
+	if GetStopButtonStatus(prm1) == BS_DISABLE : return 0
+#ifdef USE_SPECIAL_TABLE
+// RCTMakerで作成した物とは別に用意したテーブルを併用する例
+/*--
+	int slide
+	int p
+	int idx
+--*/
+	p = ReelStop_new(prm1)
+	if (stop_count@SlotModule == 0) && (prm1 == LEFT_REEL) && (game_mode == GM_NORMAL) {
+	//通常時、第1停止左なら中右のテーブルがあるかも
+		if (koyaku_flag == LOT_HAZURE) || (koyaku_flag == LOT_CHERRY) {
+			switch(bonus_flag)
+				case BF_HAZURE:
+					idx = 0
+					swbreak
+				case BF_BIG:
+					idx = 1
+					swbreak
+				case BF_REG:
+					idx = 2
+					swbreak
+			swend
+		}
+	}
+#else /* USE_SPECIAL_TABLE */
+	ReelStop(prm1)
+#endif
+	if(stcnt==0&&zentyo>0&&rnd(16)==0):zenpiro = true
+	stopsound = SE_STOP
+	if(piro):stopsound = SE_SPSTOP2
+	stopstr = ""+stopstr+""+prm1
+	if(syoto!=0&&power_syoto==False){
+		switch(stopstr)
+			case "0":
+			case "1":
+			case "2":
+				SetFlash 67+prm1
+			swbreak
+			case "01"
+			case "10"
+				SetFlash 72
+			swbreak
+			case "02"
+			case "20"
+				SetFlash 70
+			swbreak
+			case "12"
+			case "21"
+				SetFlash 71
+			swbreak
+			default:
+				SetFlash 73
+			swbreak
+		swend
+		ov_play SE_SYOTO
+		syoto--
+	}
+	if(syoto==stcnt+1&&power_syoto){
+		SetFlash 67+prm1
+		ov_play SE_BAN
+	}
+	if(stcnt==0&&prm1==2&&game_mode==GM_BIG&&GetReelCharPos(prm1)==11){
+		ov_play SE_SPSTOP
+	}
+	dim strstart,4
+	strstart(0) = 0,3,5,8
+	dim strlengs,3
+	strlengs(0) = 3,2,3
+	ov_play stopsound
+	ov_setpan stopsound,0
+	stcnt++
+	if(stcnt==3){
+		zenpiro = 0
+		stopstr = ""
+	}
+	return
+	
+//FPS計測
+#deffunc CountFPS int prm1
+	return
+
+// 初期化
+*selectsettei
+	screen 0,180,230
+	gsel 0
+	cls 0
+	pos 0,0
+	mes "設定を選択してください"
+	button goto "設定1",*settei1
+	button goto "設定2",*settei2
+	button goto "設定3",*settei3
+	button goto "設定4",*settei4
+	button goto "設定5",*settei5
+	button goto "設定6",*settei6
+	button goto "設定?",*settei_rand
+	chkbox "ハイスピード",high_speed
+	//tukoutal = 64
+	//input tukoutal
+	input waits
+	stop
+*settei1
+	settei = 0
+	Initialize
+	goto *main
+*settei2
+	settei = 1
+	Initialize
+	goto *main
+*settei3
+	settei = 2
+	Initialize
+	goto *main
+*settei4
+	settei = 3
+	Initialize
+	goto *main
+*settei5
+	settei = 4
+	Initialize
+	goto *main
+*settei6
+	settei = 5
+	Initialize
+	goto *main
+*settei_rand
+	settei_rnd = true
+	settei = 0
+	Initialize
+	onexit goto *settei_dialog
+	goto *main
+*settei_dialog
+	dialog "今回の設定は「"+(settei+1)+"」でした"
+	end
+// 初期化
+#deffunc Initialize
+/*--
+	int i
+	dim fmt
+	int w
+	int hs
+--*/
+
+	screen 0,0.7*1280,0.7*710
+	celload "img\\panel.png",128
+	celput 128
+	//cls 1
+
+//BGM,SEの読み込み
+	ov_init 44100, 2, 16, 89
+	ov_load "sound\\stop.ogg", SE_STOP, GF_SE
+	ov_load "sound\\wait.ogg", SE_WAIT, GF_SE
+	ov_load "sound\\spstarton.ogg", SE_SPSTARTON, GF_SE
+	ov_load "sound\\rushbgm\\1.ogg", BGM_BB1, GF_BGM
+	ov_load "sound\\rushbgm\\2.ogg", BGM_BB2, GF_BGM
+	ov_load "sound\\norstart.ogg", SE_START, GF_SE
+	ov_load "sound\\tenpai.ogg", SE_TENPAI, GF_SE
+	ov_load "sound\\dabuten.ogg", SE_DABUTEN, GF_SE
+	ov_load "sound\\jacnabi.ogg", SE_JACSOUND, GF_SE
+	ov_load "sound\\bb1start.ogg",SE_BB1START,GF_SE
+	ov_load "sound\\bb2start.ogg",SE_BB2START,GF_SE
+	ov_load "sound\\superbell.ogg",SE_SPBELL,GF_SE
+	ov_load "sound\\1bet.ogg", SE_1BET, GF_SE
+	ov_load "sound\\atend.ogg", SE_ATEND, GF_SE
+	ov_load "sound\\spstop.ogg", SE_SPSTOP, GF_SE
+	ov_load "sound\\spstop2.ogg", SE_SPSTOP2, GF_SE
+	ov_load "sound\\yokoku.ogg", SE_YOKOKU, GF_BGM
+	ov_load "sound\\hit.ogg", SE_HIT, GF_SE
+	ov_load "sound\\huahua.ogg",SE_HUAHUA,GF_SE
+	ov_load "sound\\atbgm.ogg", BGM_AT1, GF_SE
+	ov_load "sound\\keizoku.ogg", SE_KEIZOKU, GF_SE
+	ov_load "sound\\atstart.ogg", SE_ATSTART, GF_SE
+	ov_load "sound\\bell.ogg",SE_BELL,GF_BGM
+	se_length_1bet = stat
+	ov_load "sound\\jacgame.ogg", BGM_JAC1, GF_BGM
+	ov_load "sound\\cd7.ogg", BGM_CD7, GF_BGM
+	ov_load "sound\\jacgame2.ogg", BGM_JAC2, GF_BGM
+	//ov_load "sound\\jacgame2.ogg", BGM_JAC2, GF_BGM
+	ov_load "sound\\3bet.ogg", SE_3BET, GF_SE
+	se_length_3bet = stat
+	ov_load "sound\\replay.ogg", SE_REPLAY, GF_SE
+	se_length_replay = stat
+	ov_load "sound\\bbend.ogg",BGM_BB1END, GF_BGM
+	ov_load "sound\\pay2.ogg", SE_PAY2, GF_BGM
+	se_length_pay2 = stat
+	ov_load "sound\\pay.ogg", SE_PAY6, GF_SE
+	se_length_pay6 = stat
+	ov_load "sound\\paka-n.ogg",SE_PAKAN,GF_BGM
+	ov_load "sound\\ban.ogg",SE_BAN,GF_BGM
+	ov_load "sound\\nabi.ogg",SE_NABI,GF_BGM
+	ov_load "sound\\rushbgm\\3.ogg",BGM_BB3,GF_BGM
+	ov_load "sound\\big4.ogg",BGM_BB4,GF_BGM
+	ov_load "sound\\big5.ogg",BGM_BB5,GF_BGM
+	ov_load "sound\\tenpai2.ogg",SE_TENPAI2,GF_SE
+	ov_load "sound\\voice1.ogg",SE_VOICE1,GF_SE
+	ov_load "sound\\voice2.ogg",SE_VOICE2,GF_SE
+	ov_load "sound\\voice3.ogg",SE_VOICE3,GF_SE
+	
+	ov_load "sound\\15se.ogg",SE_15SE,GF_SE
+	ov_load "sound\\pay15.ogg",SE_PAY15,GF_SE
+	ov_load "sound\\yokoku.ogg",SE_YOKOKU,GF_SE
+	ov_load "sound\\syoto.ogg",SE_SYOTO,GF_SE
+	ov_load "sound\\hi.ogg",BGM_HI,GF_BGM
+	
+	// 同じ音を複数鳴らしたい場合はov_duplicateでバッファを複製する
+		// BGMのループポイントの計算
+	ov_getformat BGM_BB1, fmt
+	//ループ開始位置 = ファンファーレ部分のサンプル数
+	bgm_bb1_lsp = 0
+	//ループ終了位置 = ループ開始位置 + ループ区間のサンプル数
+	bgm_bb1_lep = fmt*44100
+
+	ov_getformat BGM_JAC1,fmt
+	
+	bgm_jac1_lsp = 0.623*44100
+	bgm_jac1_lep = fmt*44100
+	
+	
+	ov_setvolume SE_PAY2,-500
+
+//SlotModule関連の設定
+	InitD3DEx 0, VSYNC_DDRAW,150-10,121,(197+5)*3,84*3+30,10,37,24
+	SetVSyncParam 3, 3
+	SetFont "ＭＳ ゴシック", 24, 17
+	CreateTexture 1,"img\\reelchip2.png", TEX_REELCHIP
+	if InitSlotModule("dat\\制御.smr","dat\\flash.dat", TEX_REELCHIP,84,  20, 0,0, 197+5) == FALSE : end
+
+	SetBoundStartParams 300,0.8,100 //廃止
+	SetStartMode 2, 400
+	SetBGColor 0
+	SetRPM 92
+	SetBlurMode 0
+	
+	SetReelPos 7*174,7*174,7*174
+	OnReelStop *ReelStopCallBack
+	OnReelStoping *ReelStopingCallBack
+	OnAllReelStop *AllReelStopCallBack
+	OnTenpai *TenpaiCallBack
+	OnFlashEnd *FlashEndCallBack
+
+	if (d3dx9_version@SlotModule == 0) || (ps_version@SlotModule < 20) {
+		// PixelShaderが使えない
+		filter_none = 1
+	}
+	nofilter_col_table = 0, $FFFFFFFF, $FFFF4444, $FF44FF444, $FF4444FF, $FFFFFF44
+
+	//bonus_flag = BF_BIG
+	game_mode = GM_NORMAL
+	//1 154,151
+	//2 154,231
+	//3 154,311
+	betlanp(0)
+	return
+
+#deffunc dummyfunc
+	return
+/*--
+	int key
+	int text
+--*/
+*main
+	if(settei==-1){
+		goto *selectsettei//Initialize
+	}
+	timeGetTime
+	now_time = stat
+	SetFrameTime now_time
+	SetFlash 13
+	randomize now_time
+	if(settei_rnd==true):settei = rnd(6)
+repeat
+
+	getkey b,17
+	if(b==1){
+		if(bcnt==20){
+			setI = (setI+1)\(LOT_REG+1)
+			title ""+setI
+			bcnt = 0
+		}
+		bcnt++
+	}else{
+		bcnt = 0
+	}
+	timeGetTime
+	now_time = stat
+	SetFrameTime now_time
+	if(high_speed):event_timer = 0
+	switch(slot_status)
+		case SS_BET:
+			if now_time > event_timer : slot_status = SS_BET_END
+			swbreak
+		case SS_BET_END:
+			if (key & 2 || auto == 1||rebaon==1){
+				if(rebaon==0 /*&& game_mode==GM_NORMAL*/){
+					Start
+					cpushed = false
+					timestate = (wait_timer+waits-now_time)/3
+					if(timestate<0):timestate = 0
+					ReelStart timestate*2,timestate,0
+					voice_count = 0
+					ov_play SE_WAIT/*
+					if(nabi_lot>0){
+						if(nabi&&rnd(nabi_lot) == 0){
+							if(rcc>=RCC_BELL2&&rcc<=RCC_BELL4){
+								rightset " "+(rcc-RCC_BELL2+1)+" "
+								setFlash 41+rcc-RCC_BELL2
+							}
+						}
+					}*/
+					canstop = false
+				}
+				rebaon = 1
+				if(wait_timer+waits<now_time){
+					//ov_stop SE_WAIT
+					//ov_play SE_START
+					rebaon = 0
+					slot_status = SS_REEL_START
+					if(effect>3){
+						ov_play SE_YOKOKU
+						SetFlash 76
+					}
+					wait_timer = now_time
+					if(nabi_lot>0){
+						if(nabi&&rnd(100)<nabi_lot == 0){
+							if(rcc>=RCC_BELL2&&rcc<=RCC_BELL4){
+								rightset " "+(rcc-RCC_BELL2+1)+" "
+								setFlash 41+rcc-RCC_BELL2
+								syoto = 3
+							}
+						}
+					}
+					canstop = true
+				}
+			}
+			swbreak
+		case SS_REPLAY:
+			if now_time >= event_timer {
+				ov_play SE_3BET
+				payset 0
+				repeat 3
+					betlanp(cnt+1)
+					await 40
+					redraw
+				loop
+				lanp_str = "11111111"
+				lanp_label = *l_none
+				setLanpImage
+				SetSubFlash
+				event_timer = now_time + SE_LENGTH_3BET
+				slot_status = SS_REPLAY_BET
+			}
+			swbreak
+		case SS_REPLAY_BET:
+			if now_time >= event_timer {
+				slot_status = SS_BET_END
+			}
+			swbreak
+		case SS_PAY_COIN:
+			if now_time >= event_timer {
+				slot_status = SS_READY
+			}
+			swbreak
+		case SS_BONUS_START:
+			if now_time > event_timer {
+				slot_status = SS_READY
+			}
+			swbreak
+		case SS_BIG_END:
+			if now_time > event_timer {
+				slot_status = SS_READY
+			}
+			swbreak
+	swend
+	gosub *ranp
+	stick key,1+8+4
+	if(game_mode==GM_JAC){
+		if(cud\20<10){
+			p = ""
+			repeat jac_get_counter
+				p = p + "2"
+			loop
+			p = p + "00000000"
+			lanp_str = p
+		}else{
+			lanp_str = "00000000"
+		}
+		cud++
+		setLanpImage
+	}else{
+		cud = 0
+	}
+	
+	if(lanp_loop!=0){
+		lanp_state--
+		if(lanp_state==0){
+			gosub lanp_label
+			if(be_se):ov_play SE_BAN
+			setLanpImage
+			lanp_count++
+		}
+	}else{
+		lanp_count = 0
+	}
+	if key & 32: auto = 1-auto
+	if key & 2 || auto == 1: MaxBetAndStart(now_time)
+	if (auto == 1&&canstop){
+		if(auto_counter>20||game_mode!=GM_NORMAL||bonus_flag!=BF_HAZURE||high_speed){
+			gosub *Autoplay
+			auto_counter=0
+		}else{
+			auto_counter++
+		}
+	}
+	///if (auto==1&&bonus_flag!=BF_HAZURE&&yaku==LOT_HAZURE):auto = 0
+	if(canstop){
+		if ((key & 1)||(key & 2)): PushStopButton(0) 
+		if ((key & 8)||(key & 2)): PushStopButton(1)
+		if ((key & 4)||(key & 2)): PushStopButton(2)
+	}
+	if(game_mode==GM_NORMAL&&cpushed==false&&(key&16)!=false&&stcnt==3){
+		chancenum = 1
+		if(rnd(2)==0):chancenum++
+		if(rnd(3)==0):chancenum++
+		if(rcc==RCC_1MAI1||rcc==RCC_1MAI2){
+			chancenum = 5
+			if(rnd(2)==0):chancenum++
+			if(rnd(4)==0):chancenum+=rnd(2)
+		}
+		if(bonus_flag!=BF_HAZURE):chancenum = rnd(4)+4
+		if(bonus_flag==BF_BIG&&rcc!=RCC_BIG4){
+			if(rnd(4)<3){
+				chancenum = rnd(4)
+				if(rnd(2)==0):chancenum+=4
+			}else{
+				chancenum = 7
+			}
+		}
+		lanp_str = "22222222"
+		lanp_str = strmid(lanp_str,0,chancenum+1)+"0000000"
+		lanp_label = *l_none
+		setLanpImage
+		cpushed = true
+		reelwait 20
+		lanp_str = "00000000"
+		lanp_label = *l_none
+		setLanpImage
+	}
+	
+	BeginScene
+	
+	ReelMove
+	Render
+	EndScene
+	Present
+	//CountFPS(now_time)
+	if update_gameinfo : DrawGameInfo
+	await 0 : sleep 1
+loop
+end
+
+#deffunc dummyfunc2
+	return
+
+*ReelStopCallBack
+	gosub *TenpaiCallBack
+	return
+	
+
+#deffunc dummyfunc3
+	return
+	
+*ReelStopingCallBack
+	idx = laststopreel@SlotModule
+	return
+
+*TenpaiCallBack
+	if(GetReelStatus(0)==0 && GetReelStatus(1)==0 && GetReelStatus(2)!=0 && game_mode == GM_NORMAL)==false:return
+	tenpailine = -1
+	dim tmp,5
+	dabulu = 0
+	_TenpaiCheck(tmp)
+	repeat 5
+		if(tmp(cnt)>=HIT_BIG1&&tmp(cnt)<=HIT_BIG3){
+				if(tenpailine != -1):dabulu = 1
+				tenpailine = cnt
+		}
+	loop
+	if(tenpailine!=-1){
+		ov_play SE_TENPAI
+	}
+	return
+
+#deffunc dummyfunc4
+	return
+/*--
+	int pay
+	int hit_line
+	int hit_yaku
+	int cherry_flag
+	int hit_pos
+	dim lines
+	int flash_id
+--*/
+*AllReelStopCallBack
+	
+	stick key,1+8+4
+	while key!=0
+		stick key,1+8+4
+		reelwait 1
+	wend
+	slot_status = SS_READY
+	//stcnt = 0
+	
+	switch(game_mode)
+		case GM_NORMAL:
+			SetGameMode 0
+			swbreak
+		case GM_BIG:
+			SetGameMode 1
+			bonus_game_counter--
+			rightset ""+bonus_game_counter
+			swbreak
+		case GM_REG:
+		case GM_JAC:
+			SetGameMode 2
+			jac_c++
+			jac_game_counter--
+			if(jac_game_counter!=0):rightset ""+(jacin_counter+1)+"-"+(jac_get_counter-1)
+			swbreak
+	swend
+
+	next_flash_id = -1
+	pay = 0
+	hit_yaku = HIT_HAZURE
+	if PayCheck_new(lines) {
+		pay = 0
+		hit_yaku = HIT_HAZURE
+		hit_line = 99
+		cherry_flag = 0
+		hit_pos = 0
+		repeat 5
+			if lines(cnt) == HIT_HAZURE: continue
+			if(hit_yaku==HIT_HAZURE&&lines(cnt)==HIT_CHERRY){
+				cherry_flag = true
+				if(hit_yaku==HIT_HAZURE):hit_line = cnt
+			}else{
+				if(hit_line>cnt):hit_line = cnt
+				if(hit_yaku==HIT_HAZURE||(lines(cnt)!=HIT_BELL2&&lines(cnt)!=HIT_BELL3&&lines(cnt)!=HIT_BELL4)){
+					hit_yaku = lines(cnt)
+					hit_line = cnt
+				}
+			}
+			pay += paycoin_table(lines(cnt), game_mode)
+		loop
+		if(hit_yaku==HIT_HAZURE&&cherry_flag = true):hit_yaku==HIT_CHERRY
+		if pay > 15 : pay = 15
+		if game_mode==GM_NORMAL && pay > 15 :pay = 15
+		if pay != 0 {
+			coin += pay
+			slot_status = SS_PAY_COIN
+			update_gameinfo = TRUE
+			if game_mode!=GM_NORMAL: getcoin += pay:else:getcoin = 0
+			
+		}
+		gensan += pay*256
+		flash_id = -1
+		if(pay>0 && game_mode == GM_NORMAL):counter += 256*pay
+		
+		if(pay!=0&&hit_yaku>=HIT_BIG1&&hit_yaku<=HIT_BIG3){
+			if(pay==13||hit_yaku==HIT_SUIKA1)&&(hit_yaku!=HIT_BIG1&&hit_yaku!=HIT_BIG3&&hit_yaku!=HIT_BIG3){
+				ov_loop SE_PAY2
+			}else{
+				if(pay==15){
+					ov_loop SE_PAY15
+				}else{
+					if((hit_yaku!=HIT_BIG1&&hit_yaku!=HIT_BIG2)){
+							ov_loop SE_PAY6
+					}
+				}
+			}
+			
+			payset pay
+			if(pay==0):reelwait 1500
+			ov_stop SE_PAY2
+			ov_stop SE_PAY6
+			ov_stop SE_PAY15
+		}
+		switch(game_mode)
+			case GM_NORMAL:
+				switch(hit_yaku)
+					case HIT_REPLAY:
+						if(bonus_flash==BF_HAZURE||rnd(2)==0)&&isAR==false:flash_id = 2
+						next_flash_id = 17 + hit_line
+						if(hit_line==5):next_flash_id = 17 + 1
+						if(hit_line==6):next_flash_id = 80
+						slot_status = SS_REPLAY
+						event_timer = now_time+500
+						/*
+						if(auto==false):event_timer = now_time + SE_LENGTH_REPLAY
+						if(nabi==false&&athit==false&&bonus_flag==BF_HAZURE&&ren==0):gosub *seg
+						*/
+						swbreak
+					case HIT_BELL:
+							next_flash_id = 17 + hit_line
+						swbreak
+					case HIT_SUIKA1:
+					case HIT_SUIKA2:
+					case HIT_SUIKA3:
+					case HIT_SUIKA4:
+					case HIT_TOMATO2:
+						next_flash_id = 17 + hit_line
+						if(hit_line==5):next_flash_id = 79
+						if(hit_line==6):next_flash_id = 80
+						swbreak
+					case HIT_CHERRY:
+						if(hit_line>3):hit_line = hit_line - 2
+						next_flash_id = 14+hit_line
+						if((nabi==true&&rnd(4)<3)||(nabi==false&&rnd(4)==0)){
+							next_flash_id = 4
+						}
+						swbreak
+					case HIT_BIG1:
+					case HIT_BIG2:
+					case HIT_BIG3:
+						arRen = false
+						seven_count = n
+						jacf = 0
+						next_flash_id = 17 + hit_line
+						nabi = false
+						gensan = 0
+						SetFlash next_flash_id
+						game_mode = GM_BIG
+						bonus_game_counter = 30
+						bonus_flag = BF_HAZURE
+						now_bb = 0
+						jacin_counter = 3
+						event_timer = now_time
+						slot_status = SS_BONUS_START
+						bonus_ato = 1
+						counter = 0
+						bigs = hit_yaku-HIT_BIG1
+						ov_bloop bgm_data(0,bigs),0,bgm_data(1,bigs),-1,-1
+						bf = true
+						kokuti = false
+						big_stock--
+						rightset ""+bonus_game_counter
+						big_cnt++
+					swbreak
+					case HIT_REG1:
+					case HIT_REG2:
+					case HIT_REG3:
+					case HIT_REG4:
+					case HIT_REG5:
+					case HIT_REG6:
+					case HIT_REG7:
+					case HIT_REG8:
+						next_flash_id = 17 + hit_line
+						if(hit_line==5):next_flash_id = 79
+						if(hit_line==6):next_flash_id = 80
+						ov_loop BGM_JAC1
+						jacin_counter = 0
+						rightset "1-8"
+						nabi = false
+						jac_game_counter = 12
+						jac_get_counter = 8
+						bonus_flag = BF_NORMAL
+						game_mode = GM_REG
+						reg_cnt++
+						reg_stock--
+						swbreak
+					swend
+				swbreak
+			case GM_BIG:
+				switch(hit_yaku)
+					case HIT_REPLAY:
+						rightset ""+(jacin_counter)+"-8"
+						next_flash_id = 17 + hit_line
+						if(hit_line==5):next_flash_id = 79
+						if(hit_line==6):next_flash_id = 80
+						ov_stop bgm_data(0,bigs)
+						ov_loop BGM_JAC1
+						jacin_counter--
+						jac_game_counter = 12
+						jac_get_counter = 8
+						game_mode = GM_JAC
+						swbreak
+					case HIT_REG1:
+						rightset ""+(jacin_counter)+"-8"
+						next_flash_id = 17+ hit_line
+						ov_stop BGM_BB1
+						ov_loop BGM_JAC1
+						jacin_counter--
+						jac_game_counter = 12
+						jac_get_counter = 8
+						game_mode = GM_JAC
+						sub_mode = SUB_REG
+						swbreak
+					case HIT_BELL:
+						next_flash_id = 17 + hit_line
+						swbreak
+					case HIT_15_1:
+					case HIT_15_2:
+						next_flash_id = 84 + hit_line
+						swbreak
+					case HIT_SUIKA1:
+						next_flash_id = 17 + hit_line
+						if(hit_line==5):next_flash_id = 79
+						if(hit_line==6):next_flash_id = 80
+						if(pay==15){
+							next_flash_id = 81
+						}
+						swbreak
+					case HIT_CHERRY:
+						if(rnd(6)<2):flash_id = 4
+						next_flash_id = 17+hit_line
+						swbreak
+					swend
+				swbreak
+			case GM_JAC:
+			case GM_REG:
+				next_flash_id = 17+0
+				if(sub_mode==SUB_REG):next_flash_id = 79
+				jac_get_counter--
+			swbreak
+		swend
+	}
+	
+	if flash_id != -1 {
+		SetFlash flash_id
+		if (next_flash_id == -1) {
+			next_flash_id = 0
+		}
+		flash_id = -1
+	}
+	if(flash_id!=-1){
+		flash_id = 0
+		if(next_flash_id!=-1){
+			flash_id = next_flash_id
+			next_flash_id = -1
+		}
+	}
+	SetFlash flash_id
+	
+	/*while flash_id!=-1
+		title ""+next_flash_id
+		reelwait 10
+	wend
+*/
+	if(rcc==RCC_JACIN){
+		lanp_str = "11111111"
+		lanp_label = *l_none
+		setLanpImage
+	}
+	setsubFlash
+	if(nabi==true&&rnd(24)==0):nabi = false
+	if(game_mode!=GM_NORMAL&&bonus_flag!=BF_HAZURE):koyakuren = 0
+	if (flash_id != -1){
+		if(next_flash_id != -1){
+			SetFlash flash_id
+			flash_id=next_flash_id
+			next_flash_id = 0
+		}else{
+			SetFlash flash_id
+			flash_id=-1
+			next_flash_id = -1
+		}
+	}
+	if(pay!=0&&(hit_yaku<HIT_BIG1||hit_yaku>HIT_BIG3)){
+		if(pay==13||hit_yaku==HIT_SUIKA1)&&(hit_yaku!=HIT_BIG1&&hit_yaku!=HIT_BIG3&&hit_yaku!=HIT_BIG3){
+			ov_loop SE_PAY2
+		}else{
+			if(pay==15){
+				ov_loop SE_PAY15
+			}else{
+				if((hit_yaku!=HIT_BIG1&&hit_yaku!=HIT_BIG2)){
+					ov_loop SE_PAY6
+				}
+			}
+		}
+		
+		payset pay
+		if(pay==0):reelwait 1500
+		ov_stop SE_PAY2
+		ov_stop SE_PAY6
+		ov_stop SE_PAY15
+	}
+	if(slot_status == SS_REPLAY){
+		ov_play SE_REPLAY
+	}
+	switch(game_mode)
+		case GM_BIG:
+			if bonus_game_counter <= 0 {
+				game_mode = GM_NORMAL
+				ov_stop BGM_BB1
+				//ov_play BGM_BB1END
+				play_cnt = 0
+				if(hyper_lanp == 1){
+					lanpstart = 0
+				}
+				seven_lanp = 0
+				moon_lanp = 0
+				ov_stop bgm_data(0,ren)
+					rightset ""+getcoin
+					reelwait 500
+				event_timer = now_time + BIG_END_WAIT
+				slot_status = SS_BIG_END
+				SetFlash 0
+			}
+			swbreak
+		case GM_JAC:
+		case GM_REG:
+			if (jac_get_counter <= 0) || (jac_game_counter <= 0) {
+				if jacin_counter <= 0 || bonus_game_counter <= 1{
+					game_mode = GM_NORMAL
+					play_cnt = 0
+					slot_status = SS_BIG_END
+					SetFlash 0
+					ov_stop BGM_JAC1
+					rightset ""+getcoin
+					reelwait 500
+					iti = true
+					ov_stop BGM_AT1+now_bgme
+					onReg=true
+				} else {
+					bif = true
+					game_mode = GM_BIG
+					ov_stop BGM_JAC1
+					ov_stop BGM_BB1
+					ov_stop BGM_JAC2
+					//ファンファーレ部分を飛ばしてループ再生
+						ov_bloop bgm_data(0,bigs),bgm_data(1,bigs),bgm_data(1,bigs),-1,-1
+					rightset " "+bonus_game_counter
+				}
+				reinnbo = 0
+			}
+			swbreak
+	swend
+	
+	gmode 4,,,255
+	color 255,255,255
+	pos 0.7*1055,0.7*580
+	return
+
+#deffunc dummyfunc5
+	return	
+*chance
+	return
+*FlashEndCallBack
+	flash_id = -1
+	if next_flash_id != -1 {
+	// Flashの予約あり
+		SetFlash next_flash_id
+		next_flash_id =-1
+	}
+	return
+/*--*/
+*Autoplay
+	if(game_mode==GM_BIG){
+		if(rcc==RCC_JACIN){
+			PushStopButton(2)
+			PushStopButton(1)
+			if(GetReelCharPos(0)!=6&&GetStopButtonStatus(0)!=BS_DISABLE):return
+			PushStopButton(0)
+			return
+		}
+		if (GetReelCharPos(0)!=17&&GetStopButtonStatus(0) != BS_DISABLE):return
+		PushStopButton(0)
+		if (GetStopButtonStatus(0) != BS_DISABLE):return
+		PushStopButton(1)
+		if (GetStopButtonStatus(1) != BS_DISABLE):return
+		PushStopButton(2)
+	}else{
+		if (bonus_flag!=BF_HAZURE){
+			if (GetReelCharPos(0)!=18-1&&GetStopButtonStatus(0) != BS_DISABLE):return
+			PushStopButton(0)
+			if (GetReelCharPos(2)!=17-1&&GetStopButtonStatus(2) != BS_DISABLE):return
+			PushStopButton(2)
+			if (GetReelCharPos(1)!=16-1&&GetStopButtonStatus(1) != BS_DISABLE):return
+			PushStopButton(1)
+		}else{
+			if (game_mode==GM_JAC)&&((GetReelCharPos(0)!=13-1) && GetStopButtonStatus(0) != BS_DISABLE):return
+			PushStopButton(0)
+			PushStopButton(1)
+			PushStopButton(2)
+		}
+	}
+	return
+*ranp
+	return
+
+*effect_select
+
+return
+*rthuriwake
+return
+*seg
+return
+
+
+*huahua
+return nc+1
+*ruret
+	return
+
+//左から右にpl1の上をpl2でpl3のスピードではしる
+//lanp_countは0～
+*l_none
+	_label_tmp = *l_none
+	setLanpLabel _label_tmp,-1,0
+	return
+*l_left_to_right
+	be_se = false
+	_stmp = ""+pl2+pl1+pl1+pl1+pl1+pl1+pl1+pl1
+	lanp_str = shift_str(_stmp,lanp_count)
+	if(lanp_count==8){
+		lanp_str = ""+pl1+pl1+pl1+pl1+pl1+pl1+pl1+pl1
+		_label_tmp = *l_none
+		setLanpLabel _label_tmp,-1,0
+	}else{
+		_label_tmp = *l_left_to_right
+		setLanpLabel _label_tmp,pl3,-1
+	}
+return
+
+*l_right_to_left
+	be_se = false
+	_stmp = ""+pl1+pl1+pl1+pl1+pl1+pl1+pl1+pl2
+	lanp_str = shift_str(_stmp,-lanp_count)
+	if(lanp_count==8){
+		lanp_str = ""+pl1+pl1+pl1+pl1+pl1+pl1+pl1+pl1
+		_label_tmp = *l_none
+		setLanpLabel _label_tmp,-1,0
+	}else{
+		_label_tmp = *l_right_to_left
+		setLanpLabel _label_tmp,pl3,-1
+	}
+return
+//ルーレットよう
+//注意：はじめにlanp_strにいれておくこと
+//pl1 = 表示色
+//pl2 = 停止位置
+//pl3 = スピード
+*l_left_to_right_rulet
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,lanp_count\8)
+	if(lanp_count==pl2){
+		pl2 = lanp_count\8
+		_label_tmp = *l_tenmetu
+		setLanpLabel _label_tmp,pl3,-1
+	}else{
+		_label_tmp = *l_left_to_right_rulet
+		setLanpLabel _label_tmp,pl3,-1
+	}
+return
+
+*l_right_to_left_rulet
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,7-(lanp_count\8))
+	if(lanp_count==pl2){
+		_label_tmp = *l_tenmetu
+		pl2 = 7-(lanp_count\8)
+		setLanpLabel _label_tmp,pl3,-1
+	}else{
+		_label_tmp = *l_right_to_left_rulet
+		setLanpLabel _label_tmp,pl3,-1
+	}
+return
+//マルチルーレット、lanp_lootにいれておくこと
+*l_multi_rulet
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,instr(lanp_loot,0,""+(lanp_count\8+1)))
+	if(lanp_count==pl2){
+		_label_tmp = *l_none
+		setLanpLabel _label_tmp,-1,0
+	}else{
+		_label_tmp = *l_multi_rulet
+		setLanpLabel _label_tmp,pl3,-1
+	}
+return
+
+//ルーレット用回転
+*l_left_to_right_loop
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,lanp_count\8)
+	_label_tmp = *l_left_to_right_loop
+	if(stcnt==lanp_stop){
+		pl3 = 15
+		lanp_count = (8+lanp_count)\8
+		pl2 = pl2+(8-lanp_count)+lanp_count
+		_label_tmp = *l_left_to_right_rulet
+	}
+	setLanpLabel _label_tmp,pl3,-1
+return
+
+*l_right_to_left_loop
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,7-(lanp_count\8))
+	_label_tmp = *l_right_to_left_loop
+	if(stcnt==lanp_stop){
+		pl3 = 15
+		lanp_count = (7-lanp_count)\8
+		pl2 = (7-pl2)+(8-lanp_count)+lanp_count
+		_label_tmp = *l_left_to_right_rulet
+	}
+	setLanpLabel _label_tmp,pl3,-1
+return
+
+*l_multi_loop
+	be_se = true
+	if(lanp_count==0):lanp_start = lanp_str
+	lanp_str = insertStr(lanp_start,""+pl1,instr(lanp_loot,0,""+(lanp_count\8+1)))
+	if(stcnt==lanp_stop){
+		pl3 = 15
+		pl2 = pl2+8-(lanp_count)
+		lanp_count = lanp_count\8
+		_label_tmp = *l_right_to_left_rulet
+	}
+	setLanpLabel _label_tmp,pl3,-1
+return
+*l_tenmetu
+	be_se = false
+	if(lanp_count\2==0):lanp_str = insertStr(lanp_start,""+5,pl2):else:lanp_str = lanp_start
+	_label_tmp = *l_tenmetu
+	setLanpLabel _label_tmp,5,-1
+return
+*kabuto
+	//Reelwait 2700
+	if(rnd(6)==0&bonus_flag==BF_BIG):reelwait 300
+	ov_play SE_KOKUTI
+	kokuti=false
+	SetFlash 75
+	i = rnd(100)
+	repeat length(seg_table)
+		i -= seg_table(cnt,yaku-LOT_BIG)
+		if(i<0){
+			ktype = cnt
+			break
+		}
+	loop
+	repeat 9
+		nowcnt = cnt
+		repeat 3
+			rightset ""
+			reelwait 15
+			rightset ""+seg_effect(nowcnt,ktype)+seg_effect(nowcnt,ktype)+seg_effect(nowcnt,ktype)
+			reelwait 15
+		loop
+	loop
+	kokuti_t = -1
+	kokuti = false
+	return
+#deffunc nabi_huriwake int _p
+	if(rnd(100)<nabi_koyaku_table(_p)){
+		nabi = true
+		i = rnd(100)
+		repeat length(nabi_rank_table_table)
+			i -= nabi_rank_table(cnt)
+			if(i<0){
+				nabi_lot = nabi_rank_table_table(cnt)
+				break
+			}
+		loop
+	}
+return

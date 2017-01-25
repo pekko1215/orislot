@@ -1,0 +1,12 @@
+*.png
+*.ogg
+*.dat
+*.smr
+hsptmp
+img
+sound
+effect
+dat
+*.dll
+start.ax
+*.exe

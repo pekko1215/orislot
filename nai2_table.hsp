@@ -1,0 +1,295 @@
+/*--
+	dim lot_table
+	dim paycoin_table
+	dim table_select_table
+	dim center_table
+	dim right_table
+	dim effect_info
+	dim effect_select_table
+--*/
+// RCTMaker上での構成役の定義順
+#const HIT_HAZURE	0
+#const HIT_REPLAY	1
+#const HIT_BELL 	2
+#const HIT_SUIKA	3
+#const HIT_CHERRY	4
+#const HIT_BIG1		5
+#const HIT_BIG2		6
+#const HIT_BIG3		7
+#const HIT_REG1		8
+#const HIT_REG2		9
+#const HIT_REG3		10
+#const HIT_REG4		11
+#const HIT_REG5		12
+#const HIT_REG6		13
+#const HIT_REG7		14
+#const HIT_REG8		15
+#const HIT_JAC1		16
+#const HIT_15_1		17
+#const HIT_15_2		18
+
+
+// RCTMakerで作成した制御ルールの番号
+#const RCC_HAZURE	0
+#const RCC_BELL		1
+#const RCC_REPLAY	2
+#const RCC_SUIKA	3
+#const RCC_CHERRY	4
+#const RCC_BIG1		5
+#const RCC_BIG2		6
+#const RCC_BIG3		7
+#const RCC_REG1		8
+#const RCC_15_1		9
+#const RCC_15_2		10
+#const RCC_JACIN1	11
+#const RCC_JACIN2	12
+#const RCC_JACGAME	13
+
+
+#const SUB_NORMAL	 0
+#const SUB_HI		 1
+
+// 内部抽選役
+#const LOT_HAZURE	0
+#const LOT_REPLAY	1
+#const LOT_BELL		2
+#const LOT_SUIKA	3
+#const LOT_CHERRY	4
+#const LOT_BIG		5
+#const LOT_REG		6
+
+dim lot_table, 7, 6, 4
+	// 通常時の確率 n/32768
+	lot_table(0,0,0) = 25493,4681,1927,277,240,100,50	// 設定1
+	lot_table(0,1,0) = 25458,4681,1927,277,264,108,53	// 設定2
+	lot_table(0,2,0) = 25436,4681,1927,277,275,115,57	// 設定3
+	lot_table(0,3,0) = 25379,4681,1927,300,295,124,62	// 設定4
+	lot_table(0,4,0) = 25312,4681,1927,300,321,132,65	// 設定5
+	lot_table(0,5,0) = 25253,4681,1927,341,341,136,89	// 設定6
+
+	// BONUSゲーム中の確率 n/32768
+	lot_table(0,0,1) =  1000,9632,9000,13136,0,0,     0 // 設定1
+	lot_table(0,1,1) =  1000,9632,9000,13136,0,0,     0 // 設定2
+	lot_table(0,2,1) =  1000,9632,9000,13136,0,0,     0 // 設定3
+	lot_table(0,3,1) =  1000,9632,9000,13136,0,0,     0 // 設定4
+	lot_table(0,4,1) =  1000,9632,9000,13136,0,0,     0 // 設定5
+	lot_table(0,5,1) =  1000,9632,9000,13136,0,0,     0 // 設定6
+
+	// JACゲーム中の確率 n/32768
+	lot_table(0,0,2) = 32,32768 // 設定1
+	lot_table(0,1,2) = 32,32768 // 設定2
+	lot_table(0,2,2) = 32,32768 // 設定3
+	lot_table(0,3,2) = 32,32768 // 設定4
+	lot_table(0,4,2) = 32,32768 // 設定5
+	lot_table(0,5,2) = 0 ,32768 // 設定6
+
+	// 小役高確率 n/32768
+	lot_table(0,0,3) = 11463,4681,15957,277,240,100,50	// 設定1
+	lot_table(0,1,3) = 11428,4681,15957,277,264,108,53	// 設定2
+	lot_table(0,2,3) = 11406,4681,15957,277,275,115,57	// 設定3
+	lot_table(0,3,3) = 11349,4681,15957,300,295,124,62	// 設定4
+	lot_table(0,4,3) = 11282,4681,15957,300,321,132,65	// 設定5
+	lot_table(0,5,3) = 11223,4681,15957,341,341,136,89	// 設定6   // 設定6
+dim genzan, 6
+	genzan(0) = 98,98,99,101,104,107
+	
+dim ren_table,5
+	ren_table(0) =  1,25,50,70,90
+dim ren_huriwake,5,2
+ren_huriwake(0,0)= 25,50,20, 4, 1
+ren_huriwake(0,1)= 50,25,17, 5, 3
+//GameMode
+#const GM_NORMAL	0
+#const GM_BIG		1
+#const GM_REG		2
+#const GM_JAC		3
+
+//BonusFlag
+#const BF_HAZURE	LOT_HAZURE
+#const BF_BIG		LOT_BIG
+#const BF_REG		LOT_REG
+
+//SLOTSTATUS
+#const SS_READY				0
+#const SS_BET				1
+#const SS_BET_END			2
+#const SS_REPLAY			3
+#const SS_REPLAY_BET		4
+#const SS_REPLAY_BET_END	5
+#const SS_REEL_START		6
+#const SS_PAY_COIN			7
+#const SS_BONUS_START		8
+#const SS_BIG_END			9
+
+#const BIG_START_WAIT 4000
+#const BIG_END_WAIT 4000
+
+#const BMP_HYPER	10
+#const BMP_LANP		12
+#const BMP_SEVEN	16
+#const BMP_MOON		18
+#const BMP_BAR		20
+
+
+//効果音、BGMのバッファID
+#const SE_1BET		0
+#const SE_3BET		1
+#const SE_START		2
+#const SE_STOP		3
+#const SE_REPLAY	4
+#const SE_PAY2		5
+#const SE_PAY6		6
+#const SE_PAY10		7
+#const SE_WAIT		8
+#const SE_JACSOUND	9
+#const SE_OKURE		10
+#const SE_SPSTOP	11
+#const SE_PAY4		12
+
+#const BGM_BB1		13
+#const BGM_JAC1		14
+#const BGM_BB1END	15
+#const SE_TENPAI	16
+#const SE_DABUTEN	17
+#const BGM_BB2		18
+#const SE_BB1START	19
+#const SE_BB2START	20
+#const BGM_JAC2		21
+
+#const SE_YOKOKU	22
+#const SE_HIT		23
+#const SE_ATSTART	24
+
+#const BGM_CD7		25
+#const SE_ATEND		26
+#const SE_SPBELL	27
+#const SE_HUAHUA	28
+#const SE_SPSTOP2	29
+#const SE_BELL		30
+#const SE_SPSTARTON	31
+#const SE_KEIZOKU	32
+#const BGM_AT1		34
+#const BGM_AT2		33
+#const BGM_AT3		35
+#const SE_PAKAN		36
+#const SE_BAN		37
+#const SE_NABI		38
+#const BGM_START	40
+#const BGM_BB3		41
+#const BGM_BB4		42
+#const BGM_BB5		43
+#const SE_TENPAI2	44
+#const SE_JACIN		45
+#const SE_VOICE1	46
+#const SE_VOICE2	47
+#const SE_VOICE3	48
+#const SE_15SE		49
+#const SE_PAY15		50
+#const SE_SYOTO		51
+#const BGM_HI		52
+// テクスチャID
+#const TEX_REELCHIP	0
+#const TEX_MOVIE	1
+#const TEX_MOVIE2	2
+#const TEX_MOVIE3	3
+
+dim bgm_data,3,4
+	bgm_data(0,0) = BGM_BB1, int(7.025*44100),100
+	bgm_data(0,1) = BGM_BB2, int(3.475*44100),100
+	bgm_data(0,2) = BGM_BB3, int(14.177*44100),100
+// 動画バッファのID
+#const MOVIE_HANABI		0
+#const MOVIE_HANABI2	1
+#const MOVIE_HANABI3	2
+
+#const MODE_NORMAL		0
+#const MODE_HIGH		1
+#const MODE_VERYHIGH	2
+// 払い出し枚数のテーブル  HIT_HAZURE～HIT_JACに対応
+// (-1になっているのは出現しない役)
+dim paycoin_table, 29, 4//0  1   2   3   4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
+	paycoin_table(0,0) =  0, 0,  9,  1,  2,15,15,15,15,15,15,15,15,15,15,15,-1,-1,-1  //通常時
+	paycoin_table(0,1) =  0, 2, 11, 15,  2,15,15,15,15,15,15,15,15,15,15,15,-1,15,15  //JAC中
+	paycoin_table(0,2) =  0,15,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,15, 0 ,0
+	paycoin_table(0,3) =  0,15,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,15, 0, 0
+dim effect_table,4,7
+	effect_table(0,0) = 1 ,  2, 2,  2		//外れ
+	effect_table(0,1) = 0 ,	12,	2,  0       //リプレイ
+	effect_table(0,2) = 1 ,	12,	2,	0		//プラム
+	effect_table(0,3) = 12,	12,24, 24 		//ベル
+	effect_table(0,4) = 8 ,	0 ,24, 24 		//チェリー
+	effect_table(0,5) = 12,	2 ,12, 24		//BIG
+	effect_table(0,6) = 4 ,	36,12, 12	  	//REG
+sdim lanp_table,5,5
+	lanp_table(0,0) = "00aaabbb","aaabbb00","aa0000aa","00aaaa00","0a0aa0a0"
+	lanp_table(0,1) = "aa0bb0cc","aaaa0000","aa00aa00","a0a0a0a0","0a0a0a0a"
+	lanp_table(0,2) = "aaabbbb0","abc0bcab","aaaaaa00","00aaaaaa","aabcc0aa"
+	lanp_table(0,3) = "abbccdd0","0aabbccd","a0b0c0d0","0a0b0c0d","abc00cba"
+	lanp_table(0,4) = "aaaaaaaa","abcddcba","abcdabcd","aabbccdd","00000000"
+	
+dim lanp_effect_table,5,7
+	lanp_effect_table(0,0) = 25,10,5, 1,0	//はずれ
+	lanp_effect_table(0,1) = 25,10,2, 1,0	//リプ
+	lanp_effect_table(0,2) = 25,25,5, 1,0	//ぷらむ
+	lanp_effect_table(0,3) =  5,20,25,1,0	//バる
+	lanp_effect_table(0,4) =  5,20,25,1,0	//チェり
+	lanp_effect_table(0,5) =  1, 9,70,5,15	//BIG
+	lanp_effect_table(0,6) =  0, 5,50,15,30	//REG
+dim syoto_table,8,6//  なし 1  2  3 y0 y1 y2 y3
+	syoto_table(0,0) =  94, 0, 0, 0, 3, 3, 2, 1	//ハズレ
+	syoto_table(0,1) =  88,24, 0, 0, 9, 0, 0, 0	//リプ
+	syoto_table(0,2) =  98, 0,24, 0,12, 8, 0, 0	//ベル
+	syoto_table(0,3) =  46, 2, 2,10, 0,11,51, 0	//スイカ
+	syoto_table(0,4) =  80, 0, 0, 0, 0,11, 0, 0	//チェリー
+	syoto_table(0,5) =  10,15,21, 0,30,10, 0, 0	//レアベル
+	syoto_table(0,6) =  10,36, 0, 0,19, 0, 0, 0	//レアリプレイ
+	syoto_table(0,7) =  10, 9, 1, 1,20, 2, 2, 2	//リプレイ外れＢＩＧ
+	syoto_table(0,8) =  10, 2, 9, 1,10,10,20,20	//ベル外れＢＩＧ
+	syoto_table(0,9) =  20, 5, 5,10,10,10,20,50	//スイカ外れＢＩＧ
+	syoto_table(0,10)=   5, 5, 5,20,10,10,20,20	//ＢＩＧ
+	syoto_table(0,11)=   5, 5, 5,20,10,10,20,20	//ＲＥＧ
+	
+dim mode_table,3,3
+mode_table(0,0) = 96,4 , 0
+mode_table(0,1) = 22,77, 1
+mode_table(0,2) = 0 , 1,99
+
+// 判明している部分は大花火のリール制御
+// 
+// 情報元
+// http://www28.atwiki.jp/999get/
+// http://fuzzy56.hp.infoseek.co.jp/
+//
+//テーブル選択テーブル
+//未判明箇所(-1)はRCTMakerで作成したデータを使う
+// 演出用データ
+
+//告知タイミング
+dim kokuti_table,6,2
+kokuti_table(0,0) = 60,10,2,2,16,10
+kokuti_table(0,1) = 90,10,0,0, 0, 0
+//セグ演出
+dim seg_effect,9,5
+seg_effect(0,0) = 1,2,3,4,5,6,7,6,5
+seg_effect(0,1) = 1,2,3,4,5,4,3,4,5 
+seg_effect(0,2) = 1,2,3,4,5,6,7,6,7
+seg_effect(0,3) = 1,2,3,4,5,6,7,7,7
+seg_effect(0,4) = 1,2,3,4,5,6,5,4,3
+//兜セグ
+dim seg_table,5,2
+seg_table(0,0) = 35,35,15,15,0
+seg_table(0,1) = 40,40, 0, 0,20
+
+dim rt_table_table,11
+rt_table_table(0) = 0,32,64,128,256,384,565,712,1024,1280,1560
+dim rt_table,11,6
+rt_table(0,5)     = 4,11,12, 12,  3,  2, 17,  8,   8,   8,  14
+dim hi_table,11,6
+hi_table(0,5)	  = 5,22,50, 23,  0, 0,  0,  0,   0,   0,   0
+
+dim nabi_koyaku_table,LOT_REG
+    nabi_koyaku_table(0) = 1 , 1 , 0 ,33,33,75,75
+dim nabi_rank_table_table,3
+    nabi_rank_table_table(0) = 25 ,35 ,77
+dim nabi_rank_table,3
+    nabi_rank_table(0)   = 47 ,47 ,6
